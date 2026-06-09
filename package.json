@@ -15,6 +15,7 @@
     "bcrypt": "^6.0.0",
     "choco": "^0.2.1",
     "cors": "^2.8.6",
+    "csurf": "^1.11.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",

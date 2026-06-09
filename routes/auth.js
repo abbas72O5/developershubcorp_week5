@@ -3,11 +3,13 @@ const router = express.Router();
 const User = require('../models/User');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
+const csrf = require('csurf');
 const logger = require('../logger');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 5;
+const csrfProtection = csrf();
 
 function escapeHtml(value = '') {
     return String(value)
@@ -49,6 +51,10 @@ function renderPage(title, body) {
 </html>`;
 }
 
+function csrfField(token) {
+    return `<input type="hidden" name="_csrf" value="${escapeHtml(token)}">`;
+}
+
 function requireAuth(req, res, next) {
     if (!req.session.userId) {
         return res.redirect('/login');
@@ -56,6 +62,8 @@ function requireAuth(req, res, next) {
 
     next();
 }
+
+router.use(csrfProtection);
 
 router.get('/', (req, res) => {
     if (req.session.userId) {
@@ -70,6 +78,7 @@ router.get('/signup', (req, res) => {
         <h1>Create account</h1>
         <p class="muted">Register a new user with email and password.</p>
         <form method="POST" action="/signup">
+            ${csrfField(req.csrfToken())}
             <label for="email">Email</label>
             <input id="email" name="email" type="email" required>
 
@@ -134,6 +143,7 @@ router.get('/login', (req, res) => {
         <h1>Log in</h1>
         <p class="muted">Use your registered email and password.</p>
         <form method="POST" action="/login">
+            ${csrfField(req.csrfToken())}
             <label for="email">Email</label>
             <input id="email" name="email" type="email" required>
 
@@ -218,6 +228,7 @@ router.get('/profile', requireAuth, async (req, res) => {
             <p class="muted">View and update the current account.</p>
             <p><strong>Email:</strong> <code>${escapeHtml(user.email)}</code></p>
             <form method="POST" action="/profile">
+                ${csrfField(req.csrfToken())}
                 <label for="email">Email</label>
                 <input id="email" name="email" type="email" value="${escapeHtml(user.email)}" required>
 
@@ -227,6 +238,7 @@ router.get('/profile', requireAuth, async (req, res) => {
                 <button type="submit">Update profile</button>
             </form>
             <form method="POST" action="/logout">
+                ${csrfField(req.csrfToken())}
                 <button type="submit" style="background:#475569;">Log out</button>
             </form>
         `));
@@ -287,6 +299,25 @@ router.post('/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/login');
     });
+});
+
+router.use((error, req, res, next) => {
+    if (error.code !== 'EBADCSRFTOKEN') {
+        return next(error);
+    }
+
+    const backLink = req.originalUrl.startsWith('/profile') || req.originalUrl.startsWith('/logout')
+        ? '/profile'
+        : req.originalUrl.startsWith('/login')
+            ? '/login'
+            : '/signup';
+
+    logger.warn(`CSRF token validation failed for ${req.method} ${req.originalUrl} from IP: ${req.ip}`);
+    return res.status(403).send(renderPage('Security Check Failed', `
+        <h1>Security check failed</h1>
+        <p class="error">Your form session expired or the request was invalid. Please go back and try again.</p>
+        <p class="row"><a href="${backLink}">Go back</a></p>
+    `));
 });
 
 module.exports = router;
