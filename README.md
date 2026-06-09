@@ -1,4 +1,4 @@
-# WEEK 5 — Ethical Hacking & Exploitation (Brief)
+# WEEK 5 — Ethical Hacking & Exploitation 
 
 **Internship Domain:** Cybersecurity  
 **Project:** User Management System  
