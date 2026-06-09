@@ -1,0 +1,30 @@
+# VCS
+.git
+.gitignore
+
+# Node artifacts
+node_modules
+npm-debug.log*
+
+# Local env/secrets
+.env
+.env.local
+.env.*.local
+
+# Logs and generated reports
+*.log
+security.log
+error.log
+npm-audit-report.json
+
+# Editor/OS
+.vscode
+.idea
+.DS_Store
+
+# Docs not needed for runtime image
+WEEK5_REPORT.md
+README.md
+
+# CI metadata
+.github
